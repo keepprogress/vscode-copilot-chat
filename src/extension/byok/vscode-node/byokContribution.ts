@@ -24,6 +24,7 @@ import { GeminiBYOKModelRegistry } from './geminiProvider';
 import { GroqModelRegistry } from './groqProvider';
 import { OllamaModelRegistry } from './ollamaProvider';
 import { OpenRouterBYOKModelRegistry } from './openRouterProvider';
+import { BYOK_MODEL_OVERRIDES } from './modelOverrides';
 
 export class BYOKContrib extends Disposable implements IExtensionContribution {
 	public readonly id: string = 'byok-contribution';
@@ -110,20 +111,29 @@ export class BYOKContrib extends Disposable implements IExtensionContribution {
 	}
 
 
-	private async fetchKnownModelList(fetcherService: IFetcherService) {
-		const data = await (await fetcherService.fetch('https://main.vscode-cdn.net/extensions/copilotChat.json', { method: "GET" })).json();
-		let knownModels: Record<string, BYOKKnownModels>;
-		if (data.version !== 1) {
-			this._logService.logger.warn('BYOK: Copilot Chat known models list is not in the expected format. Defaulting to empty list.');
-			knownModels = {};
-		} else {
-			knownModels = data.modelInfo;
-		}
-		this._logService.logger.info('BYOK: Copilot Chat known models list fetched successfully.');
-		for (const registry of this._modelRegistries) {
-			registry.updateKnownModelsList(knownModels[registry.name]);
-		}
-	}
+       private async fetchKnownModelList(fetcherService: IFetcherService) {
+               const data = await (await fetcherService.fetch('https://main.vscode-cdn.net/extensions/copilotChat.json', { method: "GET" })).json();
+               let knownModels: Record<string, BYOKKnownModels>;
+               if (data.version !== 1) {
+                       this._logService.logger.warn('BYOK: Copilot Chat known models list is not in the expected format. Defaulting to empty list.');
+                       knownModels = {};
+               } else {
+                       knownModels = data.modelInfo;
+               }
+
+               // Merge any local overrides into the downloaded list
+               for (const provider of Object.keys(BYOK_MODEL_OVERRIDES)) {
+                       knownModels[provider] = {
+                               ...(knownModels[provider] ?? {}),
+                               ...BYOK_MODEL_OVERRIDES[provider]
+                       };
+               }
+
+               this._logService.logger.info('BYOK: Copilot Chat known models list fetched successfully.');
+               for (const registry of this._modelRegistries) {
+                       registry.updateKnownModelsList(knownModels[registry.name]);
+               }
+       }
 
 	private async registerModelCommand() {
 		// Start the model management flow - this will handle both provider selection and model selection
