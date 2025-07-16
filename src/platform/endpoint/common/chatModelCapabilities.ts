@@ -11,7 +11,10 @@ import type { IChatEndpoint } from '../../networking/common/networking';
  * of a system message when talking to the model.
  */
 export function modelPrefersInstructionsInUserMessage(modelFamily: string) {
-	return modelFamily.includes('claude-3.5-sonnet');
+	return modelFamily.includes('claude-3.5-sonnet') ||
+		modelFamily.includes('claude-sonnet-4') ||
+		modelFamily.includes('claude-opus-4') ||
+		modelFamily.includes('claude-4-sonnet'); // backwards compatibility
 }
 
 /**
@@ -19,7 +22,10 @@ export function modelPrefersInstructionsInUserMessage(modelFamily: string) {
  * for the given model.
  */
 export function modelPrefersInstructionsAfterHistory(modelFamily: string) {
-	return modelFamily.includes('claude-3.5-sonnet');
+	return modelFamily.includes('claude-3.5-sonnet') ||
+		modelFamily.includes('claude-sonnet-4') ||
+		modelFamily.includes('claude-opus-4') ||
+		modelFamily.includes('claude-4-sonnet'); // backwards compatibility
 }
 
 /**

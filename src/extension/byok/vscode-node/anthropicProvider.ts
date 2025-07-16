@@ -32,11 +32,25 @@ export class AnthropicBYOKModelRegistry implements BYOKModelRegistry {
 			const client = new Anthropic({ apiKey });
 			const response = await client.models.list();
 			const modelList: { id: string; name: string }[] = [];
+
+			// Add models from Anthropic API that are in our known models list
 			for (const model of response.data) {
 				if (this._knownModels && this._knownModels[model.id]) {
 					modelList.push({ id: model.id, name: this._knownModels[model.id].name });
 				}
 			}
+
+			// Add local override models even if they're not in Anthropic API yet
+			// This allows access to newer models like Claude 4 before they're widely available
+			if (this._knownModels) {
+				for (const [modelId, modelInfo] of Object.entries(this._knownModels)) {
+					// Only add if not already in the list from API
+					if (!modelList.some(existing => existing.id === modelId)) {
+						modelList.push({ id: modelId, name: modelInfo.name });
+					}
+				}
+			}
+
 			return modelList;
 		} catch (error) {
 			this._logService.logger.error(error, `Error fetching available ${this.name} models`);

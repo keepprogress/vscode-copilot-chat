@@ -132,6 +132,13 @@ export function resolveModelInfo(modelId: string, providerName: string, knownMod
 
 export function isBYOKEnabled(copilotToken: Omit<CopilotToken, "token">, capiClientService: ICAPIClientService): boolean {
 	const isGHE = capiClientService.dotcomAPIURL !== 'https://api.github.com';
-	const byokAllowed = (copilotToken.isInternal || copilotToken.isIndividual) && !isGHE;
+
+	// Original restriction: only internal or individual users
+	// const byokAllowed = (copilotToken.isInternal || copilotToken.isIndividual) && !isGHE;
+
+	// Modified: Allow BYOK for all users (remove the restriction)
+	// This enables BYOK functionality for free/team users as well
+	const byokAllowed = !isGHE; // Only restrict GHE users
+
 	return byokAllowed;
 }
