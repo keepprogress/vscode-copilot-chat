@@ -38,7 +38,7 @@ export const BYOK_MODEL_OVERRIDES = {
 			maxOutputTokens: 32000,
 		}
 	},
-	Groq: {
+	xAI: {
 		// Grok 3 - xAI's advanced language model
 		'grok-3': {
 			name: 'Grok 3',
@@ -57,4 +57,5 @@ export const BYOK_MODEL_OVERRIDES = {
 		}
 	}
 };
+
 export type BYOKModelOverrides = typeof BYOK_MODEL_OVERRIDES;
