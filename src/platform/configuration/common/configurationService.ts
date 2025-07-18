@@ -517,6 +517,8 @@ export const enum CHAT_MODEL {
 	GEMINI_25_PRO = 'gemini-2.5-pro',
 	GEMINI_20_PRO = 'gemini-2.0-pro-exp-02-05',
 	GEMINI_FLASH = 'gemini-2.0-flash-001',
+	GROK_3 = 'grok-3',
+	GROK_4 = 'grok-4',
 	O1 = 'o1',
 	O3MINI = 'o3-mini',
 	O1MINI = 'o1-mini',
