@@ -24,30 +24,31 @@ namespace Copilot {
 	type DocumentUri = string;
 
 	/**
-	* The ContextProvider API allows extensions to provide additional context items that
-	* Copilot can use in its prompt. This file contains type definitions for the methods
-	* and the data structures used by the API.
+	* ContextProvider API 允許擴展提供額外的上下文項目，
+	* Copilot 可以在其提示中使用這些項目。此文件包含 API 方法和
+	* 數據結構的類型定義。
 	*
-	* Note: providing context is not enough to ensure that the context will be used in the prompt.
+	* 注意：提供上下文並不能保證該上下文會在提示中被使用。
 	*
-	* The API is exposed as an export of the Copilot extension. To use it, you can cast the
-	* exported object to the ContextProviderApiV1 interface.
+	* API 作為 Copilot 擴展的導出項目公開。要使用它，您可以將
+	* 導出的對象轉換為 ContextProviderApiV1 接口。
 	*
-	* Example:
+	* 例子：
 	* ```
 	* const copilot = vscode.extensions.getExtension("github.copilot");
 	* const contextProviderAPI = copilot.exports.getContextProviderAPI("v1") as ContextProviderApiV1;
 	* ```
 	*/
 	export interface ContextProviderApiV1 {
+		// 註冊上下文提供者
 		registerContextProvider<T extends SupportedContextItem>(provider: ContextProvider<T>): vscode.Disposable;
 	}
 
 	/**
-	* Each extension can register a number of context providers, uniquely identified by their ID.
-	* In addition, each provider has to provide:
-	* - a DocumentSelector, to specify the file types for which the provider is active
-	* - a ContextResolver, a function that returns the context items for a given request
+	* 每個擴展可以註冊多個上下文提供者，通過其 ID 唯一標識。
+	* 此外，每個提供者必須提供：
+	* - DocumentSelector，用於指定提供者處理的文件類型
+	* - ContextResolver，一個返回給定請求的上下文項目的函數
 	*
 	* Example:
 	* ```
@@ -222,6 +223,7 @@ class TelemetrySender {
 
 	private readonly telemetryService: ITelemetryService;
 	private readonly logService: ILogService;
+	// 請求遙測數據計數器 request telemetry counters
 	private sendRequestTelemetryCounter: number;
 	private sendSpeculativeRequestTelemetryCounter: number;
 
@@ -232,6 +234,7 @@ class TelemetrySender {
 		this.sendSpeculativeRequestTelemetryCounter = 0;
 	}
 
+	// 發送推測性請求遙測數據 send speculative request telemetry
 	public sendSpeculativeRequestTelemetry(context: RequestContext, originalRequestId: string, numberOfItems: number): void {
 		const sampleTelemetry = RequestContext.getSampleTelemetry(context);
 		const shouldSendTelemetry = sampleTelemetry === 1 || this.sendSpeculativeRequestTelemetryCounter % sampleTelemetry === 0;
@@ -598,40 +601,47 @@ type RequestInfo = {
 };
 
 type ContextRequestState = {
-	client: readonly ResolvedRunnableResult[];
-	clientOnTimeout: readonly ResolvedRunnableResult[];
-	server: readonly protocol.CachedContextRunnableResult[];
-	resultMap: Map<protocol.ContextRunnableResultId, ResolvedRunnableResult>;
-	itemMap: Map<protocol.ContextItemKey, protocol.FullContextItem>;
+	client: readonly ResolvedRunnableResult[];        // 客戶端結果 client results
+	clientOnTimeout: readonly ResolvedRunnableResult[]; // 超時時的客戶端結果 client results on timeout
+	server: readonly protocol.CachedContextRunnableResult[]; // 服務端緩存結果 server cached results
+	resultMap: Map<protocol.ContextRunnableResultId, ResolvedRunnableResult>; // 結果映射 result mapping
+	itemMap: Map<protocol.ContextItemKey, protocol.FullContextItem>; // 項目映射 item mapping
 };
 
 type CacheInfo = {
-	version: number;
-	state: CacheState;
+	version: number;  // 文檔版本號 document version
+	state: CacheState; // 緩存狀態 cache state
 }
 
+// 緩存狀態枚舉 cache state enumeration
 enum CacheState {
-	NotPopulated = 'NotPopulated',
-	PartiallyPopulated = 'PartiallyPopulated',
-	FullyPopulated = 'FullyPopulated'
+	NotPopulated = 'NotPopulated',         // 未填充 not populated
+	PartiallyPopulated = 'PartiallyPopulated', // 部分填充 partially populated
+	FullyPopulated = 'FullyPopulated'      // 完全填充 fully populated
 }
 
+// 可運行結果管理器更新結果 runnable result manager update result
 type ManagerUpdateResult = {
-	resolved: ResolvedRunnableResult[];
-	serverComputed: Set<string>;
-	cached: number;
-	referenced: number;
+	resolved: ResolvedRunnableResult[]; // 解析的結果 resolved results
+	serverComputed: Set<string>;        // 服務端計算的項目 server computed items
+	cached: number;                     // 緩存項目數量 cached items count
+	referenced: number;                 // 引用項目數量 referenced items count
 };
 
+// 可運行結果管理器 - 負責管理和緩存 TypeScript 上下文結果
+// Runnable Result Manager - responsible for managing and caching TypeScript context results
 class RunnableResultManager implements vscode.Disposable {
 
 	private readonly disposables = new DisposableStore();
-	private requestInfo: RequestInfo | undefined;
+	private requestInfo: RequestInfo | undefined; // 請求信息 request information
 
-	private cacheInfo: CacheInfo;
-	private results: Map<protocol.ContextRunnableResultId, ResolvedRunnableResult>;
+	private cacheInfo: CacheInfo; // 緩存信息 cache information
+	private results: Map<protocol.ContextRunnableResultId, ResolvedRunnableResult>; // 結果映射 results mapping
+	// 範圍內的可運行結果 within-range runnable results
 	private readonly withInRangeRunnableResults: { resultId: protocol.ContextRunnableResultId; range: vscode.Range }[];
+	// 範圍外的可運行結果 outside-range runnable results
 	private readonly outsideRangeRunnableResults: { resultId: protocol.ContextRunnableResultId; ranges: vscode.Range[] }[] = [];
+	// 鄰近文件的可運行結果 neighbor file runnable results
 	private readonly neighborFileRunnableResults: { resultId: protocol.ContextRunnableResultId }[];
 
 	constructor() {

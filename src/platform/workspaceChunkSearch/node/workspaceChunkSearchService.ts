@@ -48,25 +48,25 @@ const maxEmbeddingSpread = 0.65;
 
 interface ScoredFileChunk<T extends FileChunk = FileChunk> {
 	readonly chunk: T;
-	readonly distance: EmbeddingDistance;
+	readonly distance: EmbeddingDistance; // 嵌入距離評分 embedding distance score
 }
 
 export interface WorkspaceChunkSearchResult {
-	readonly chunks: readonly FileChunkAndScore[];
-	readonly isFullWorkspace: boolean;
-	readonly alerts?: readonly WorkspaceSearchAlert[];
-	readonly strategy?: string;
+	readonly chunks: readonly FileChunkAndScore[]; // 搜索到的文件塊和評分 searched file chunks with scores
+	readonly isFullWorkspace: boolean; // 是否為全工作區搜索 whether it's a full workspace search
+	readonly alerts?: readonly WorkspaceSearchAlert[]; // 搜索警告信息 search alert messages
+	readonly strategy?: string; // 使用的搜索策略 search strategy used
 }
 
 export interface WorkspaceChunkSearchSizing {
-	readonly endpoint: IChatEndpoint;
-	readonly tokenBudget: number | undefined;
-	readonly maxResults: number | undefined;
+	readonly endpoint: IChatEndpoint; // 聊天端點配置 chat endpoint configuration
+	readonly tokenBudget: number | undefined; // 令牌預算限制 token budget limit
+	readonly maxResults: number | undefined; // 最大結果數量 maximum number of results
 }
 
 export interface WorkspaceIndexState {
-	readonly remoteIndexState: CodeSearchRemoteIndexState;
-	readonly localIndexState: LocalEmbeddingsIndexState;
+	readonly remoteIndexState: CodeSearchRemoteIndexState; // 遠程索引狀態 remote index state
+	readonly localIndexState: LocalEmbeddingsIndexState; // 本地嵌入索引狀態 local embeddings index state
 }
 
 export const IWorkspaceChunkSearchService = createServiceIdentifier<IWorkspaceChunkSearchService>('IWorkspaceChunkSearchService');
@@ -74,12 +74,13 @@ export const IWorkspaceChunkSearchService = createServiceIdentifier<IWorkspaceCh
 export interface IWorkspaceChunkSearchService extends IDisposable {
 	readonly _serviceBrand: undefined;
 
-	readonly onDidChangeIndexState: Event<void>;
+	readonly onDidChangeIndexState: Event<void>; // 索引狀態變更事件 index state change event
 
-	getIndexState(): Promise<WorkspaceIndexState>;
+	getIndexState(): Promise<WorkspaceIndexState>; // 獲取索引狀態 get index state
 
-	hasFastSearch(sizing: StrategySearchSizing): Promise<boolean>;
+	hasFastSearch(sizing: StrategySearchSizing): Promise<boolean>; // 檢查是否有快速搜索 check if fast search is available
 
+	// 搜索文件塊的主要方法 main method for searching file chunks
 	searchFileChunks(
 		sizing: WorkspaceChunkSearchSizing,
 		query: WorkspaceChunkQuery,
@@ -89,8 +90,10 @@ export interface IWorkspaceChunkSearchService extends IDisposable {
 		token: CancellationToken,
 	): Promise<WorkspaceChunkSearchResult>;
 
+	// 觸發本地索引構建 trigger local index building
 	triggerLocalIndexing(trigger: BuildIndexTriggerReason, telemetryInfo: TelemetryCorrelationId): Promise<Result<true, TriggerIndexingError>>;
 
+	// 觸發遠程索引構建 trigger remote index building
 	triggerRemoteIndexing(trigger: BuildIndexTriggerReason, telemetryInfo: TelemetryCorrelationId): Promise<Result<true, TriggerIndexingError>>;
 }
 

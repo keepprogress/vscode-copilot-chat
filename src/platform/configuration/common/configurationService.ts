@@ -75,10 +75,11 @@ export interface InspectConfigResult<T> {
 }
 
 export interface IConfigurationService {
-
 	readonly _serviceBrand: undefined;
 
 	/**
+	 * 從 vscode 獲取指定鍵的用戶配置（如果未定義，則從 package.json 拉取默認值）
+	 * 如果未定義，返回默認值
 	 * Gets user configuration for a key from vscode (which if not defined, pulls default value from package.json).
 	 * If not defined, returns the default value.
 	 *
@@ -87,6 +88,8 @@ export interface IConfigurationService {
 	getConfig<T>(key: Config<T>, scope?: ConfigurationScope): T;
 
 	/**
+	 * 獲取從 vscode 配置鍵的可觀察對象（如果未定義，則從 package.json 拉取默認值）
+	 * 如果未定義，返回默認值
 	 * Gets an observable for the configuration of a key from vscode (which if not defined, pulls default value from package.json).
 	 * If not defined, returns the default value.
 	 *
@@ -95,6 +98,8 @@ export interface IConfigurationService {
 	getConfigObservable<T>(key: Config<T>): IObservable<T>;
 
 	/**
+	 * 檢索配置設定的所有信息。一個配置值通常包含：
+	 * 默認值、全局或安裝範圍的值、工作區特定值和文件夾特定值
 	 * Retrieve all information about a configuration setting. A configuration value
 	 * often consists of a *default* value, a global or installation-wide value,
 	 * a workspace-specific value and folder-specific value
@@ -104,17 +109,20 @@ export interface IConfigurationService {
 	inspectConfig<T>(key: BaseConfig<T>, scope?: ConfigurationScope): InspectConfigResult<T> | undefined;
 
 	/**
+	 * 檢查該鍵是否在任何配置範圍內由用戶配置
 	 * Checks if the key is configured by the user in any of the configuration scopes.
 	 */
 	isConfigured<T>(key: BaseConfig<T>, scope?: ConfigurationScope): boolean;
 
 	/**
+	 * 代理 vscode.workspace.getConfiguration 以允許獲取不在 Copilot 命名空間中的配置值
 	 * Proxies vscode.workspace.getConfiguration to allow getting a configuration value that is not in the Copilot namespace.
 	 * @param configKey The config key to look up
 	 */
 	getNonExtensionConfig<T>(configKey: string): T | undefined;
 
 	/**
+	 * 在 vscode 中為鍵設置用戶配置
 	 * Sets user configuration for a key in vscode.
 	 */
 	setConfig<T>(key: BaseConfig<T>, value: T): Thenable<void>;
@@ -160,12 +168,16 @@ export abstract class AbstractConfigurationService extends Disposable implements
 	protected _onDidChangeConfiguration = this._register(new Emitter<ConfigurationChangeEvent>());
 	readonly onDidChangeConfiguration = this._onDidChangeConfiguration.event;
 
+	// 用戶信息標識：是否為內部用戶和團隊成員
+	// User information flags: whether user is internal and team member
 	protected _isInternal: boolean = false;
 	protected _isTeamMember: boolean = false;
 	private _teamMemberUsername: string | undefined = undefined;
 
 	constructor(copilotTokenStore?: ICopilotTokenStore) {
 		super();
+		// 監聽令牌存儲更新以獲取用戶信息
+		// Listen to token store updates to get user information
 		if (copilotTokenStore) {
 			this._register(copilotTokenStore.onDidStoreUpdate(() => {
 				const isTeamMember = !!copilotTokenStore.copilotToken?.isVscodeTeamMember;

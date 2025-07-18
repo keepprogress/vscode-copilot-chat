@@ -57,25 +57,36 @@ export interface IRankResult {
 	query: string;
 }
 
+/**
+ * 語義搜索文本搜索提供者
+ * 實現 VS Code 的 AI 文本搜索接口，提供基於語義理解的代碼搜索功能
+ * 這是語義增強系統的核心組件
+ */
 export class SemanticSearchTextSearchProvider implements vscode.AITextSearchProvider {
 	private _endpoint: IChatEndpoint | undefined = undefined;
 	public readonly name: string = 'Copilot';
+
+	// 靜態屬性用於跟蹤反饋和遙測
 	public static feedBackSentKey = 'github.copilot.search.feedback.sent';
 	public static latestQuery: string | undefined = undefined;
 	public static feedBackTelemetry: Partial<ISearchFeedbackTelemetry> = {};
 
 	constructor(
-		@IEndpointProvider private _endpointProvider: IEndpointProvider,
-		@IWorkspaceChunkSearchService private readonly workspaceChunkSearch: IWorkspaceChunkSearchService,
-		@ILogService private readonly _logService: ILogService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
-		@IIntentService private readonly _intentService: IIntentService,
-		@IRunCommandExecutionService private readonly _commandService: IRunCommandExecutionService,
-		@ISearchService private readonly searchService: ISearchService,
-		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
-		@IParserService private readonly _parserService: IParserService,
+		@IEndpointProvider private _endpointProvider: IEndpointProvider,               // 端點提供者
+		@IWorkspaceChunkSearchService private readonly workspaceChunkSearch: IWorkspaceChunkSearchService, // 工作區塊搜索服務
+		@ILogService private readonly _logService: ILogService,                        // 日誌服務
+		@ITelemetryService private readonly _telemetryService: ITelemetryService,      // 遙測服務
+		@IIntentService private readonly _intentService: IIntentService,               // 意圖服務
+		@IRunCommandExecutionService private readonly _commandService: IRunCommandExecutionService, // 命令執行服務
+		@ISearchService private readonly searchService: ISearchService,               // 搜索服務
+		@IWorkspaceService private readonly workspaceService: IWorkspaceService,      // 工作區服務
+		@IParserService private readonly _parserService: IParserService,              // 解析器服務
 	) { }
 
+	/**
+	 * 獲取聊天端點
+	 * 懶加載模式，只在需要時初始化端點
+	 */
 	private async getEndpoint() {
 		this._endpoint = this._endpoint ?? await this._endpointProvider.getChatEndpoint('gpt-4o-mini');
 		return this._endpoint;

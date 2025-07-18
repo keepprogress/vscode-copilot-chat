@@ -35,39 +35,57 @@ export type IPromptEndpoint = IChatEndpoint & {
 export const IPromptEndpoint = createServiceIdentifier<IPromptEndpoint>('IPromptEndpoint');
 
 /**
- * Convenience intent invocation that uses a renderer for prompt crafting.
+ * 便利的意圖調用類，使用渲染器進行 prompt 製作。
+ * 這個抽象類提供了一個統一的接口來構建和渲染 prompt。
  */
 export abstract class RendererIntentInvocation {
 
 	constructor(
-		readonly intent: IIntent,
-		readonly location: ChatLocation,
-		readonly endpoint: IChatEndpoint,
+		readonly intent: IIntent,        // 意圖對象
+		readonly location: ChatLocation, // 聊天位置
+		readonly endpoint: IChatEndpoint, // 聊天端點
 	) { }
 
+	/**
+	 * 構建 prompt 的主要方法
+	 * @param promptParams prompt 參數和上下文
+	 * @param progress 進度報告器
+	 * @param token 取消標記
+	 * @returns 渲染後的 prompt 結果
+	 */
 	async buildPrompt(promptParams: IBuildPromptContext, progress: Progress<ChatResponseReferencePart | ChatResponseProgressPart>, token: CancellationToken): Promise<RenderPromptResult<OutputMode.Raw> & { references: PromptReference[] }> {
 		const renderer = await this.createRenderer(promptParams, this.endpoint, progress, token);
 		return await renderer.render(progress, token);
 	}
 
+	// 抽象方法：子類必須實現創建渲染器的邏輯
 	abstract createRenderer(promptParams: IBuildPromptContext, endpoint: IChatEndpoint, progress: Progress<ChatResponseReferencePart | ChatResponseProgressPart>, token: CancellationToken): BasePromptRenderer<any, OutputMode.Raw> | Promise<BasePromptRenderer<any, OutputMode.Raw>>;
 }
 
+/**
+ * Prompt 渲染器 - 負責將 TSX 組件渲染為最終的聊天消息
+ * 這是動態 prompt 構建系統的核心組件
+ */
 export class PromptRenderer<P extends BasePromptElementProps> extends BasePromptRenderer<P, OutputMode.Raw> {
-	private ctorName?: string; // when and iff tracing is enabled
+	private ctorName?: string; // 用於追蹤和調試的構造函數名稱
 
+	/**
+	 * 靜態工廠方法 - 創建 PromptRenderer 實例
+	 * 使用依賴注入來設置所有必需的服務
+	 */
 	public static create<P extends BasePromptElementProps>(
 		instantiationService: IInstantiationService,
 		endpoint: IChatEndpoint,
 		ctor: PromptElementCtor<P, any>,
 		props: P,
 	) {
-		// TODO@Alex, TODO@Joh: instantiationService.createInstance doesn't work here
+		// 創建子服務容器，注入 endpoint 服務
 		const hydratedInstaService = instantiationService.createChild(new ServiceCollection([IPromptEndpoint, endpoint]));
 		return hydratedInstaService.invokeFunction((accessor) => {
 			const tokenizerProvider = accessor.get(ITokenizerProvider);
 			let renderer = new PromptRenderer(hydratedInstaService, endpoint, ctor, props, tokenizerProvider, accessor.get(IRequestLogger), accessor.get(IAuthenticationService), accessor.get(ILogService));
 
+			// 如果正在運行可視化測試，裝飾並註冊渲染器
 			const visualizations = RendererVisualizations.getIfVisualizationTestIsRunning();
 			if (visualizations) {
 				renderer = visualizations.decorateAndRegister(renderer, ctor.name);
@@ -78,23 +96,24 @@ export class PromptRenderer<P extends BasePromptElementProps> extends BasePrompt
 	}
 
 	constructor(
-		private readonly _instantiationService: IInstantiationService,
-		protected readonly endpoint: IChatEndpoint,
-		ctor: PromptElementCtor<P, any>,
-		props: P,
-		@ITokenizerProvider tokenizerProvider: ITokenizerProvider,
-		@IRequestLogger private readonly _requestLogger: IRequestLogger,
-		@IAuthenticationService authenticationService: IAuthenticationService,
-		@ILogService private readonly _logService: ILogService,
+		private readonly _instantiationService: IInstantiationService, // 依賴注入服務
+		protected readonly endpoint: IChatEndpoint,                   // 聊天端點
+		ctor: PromptElementCtor<P, any>,                             // 構造函數
+		props: P,                                                    // 屬性
+		@ITokenizerProvider tokenizerProvider: ITokenizerProvider,   // 分詞器提供者
+		@IRequestLogger private readonly _requestLogger: IRequestLogger, // 請求記錄器
+		@IAuthenticationService authenticationService: IAuthenticationService, // 認證服務
+		@ILogService private readonly _logService: ILogService,      // 日誌服務
 	) {
 		const tokenizer = tokenizerProvider.acquireTokenizer(endpoint);
 		super(endpoint, ctor, props, tokenizer);
 
+		// 檢查是否為團隊成員，啟用詳細追蹤
 		const token = authenticationService.copilotToken;
 		const isTeamMember = !!(token?.isInternal && token.isVscodeTeamMember);
 		if (isTeamMember) {
 			this.ctorName = ctor.name || '<anonymous>';
-			this.tracer = new HTMLTracer();
+			this.tracer = new HTMLTracer(); // 啟用 HTML 追蹤器
 		}
 	}
 
